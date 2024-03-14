@@ -162,14 +162,30 @@ int rnnoise_demo_official(const char* inFile, const char* outFile) {
     int i;
     int first = 1;
     float x[FRAME_SIZE];
-    FILE* fin, * fout;
     DenoiseState* st = rnnoise_create(NULL);
-
+    
+    /*
+    FILE* fin, * fout;
     fin = fopen(inFile, "rb+");
     fout = fopen(outFile, "rb+");
     if (fin == NULL || fout == NULL)
-    {
+
+     {
         fprintf(stderr, "Open input/ouptut file stream fail...\n");
+        return 1;
+    }
+    */
+   
+    FILE* fin = NULL, * fout = NULL;
+    // note: fopen_s is only available in Windows, use fopen in Linux
+    errno_t errIn = fopen_s(&fin, inFile, "rb+"); // Input file must exist
+    errno_t errOut = fopen_s(&fout, outFile, "wb+"); // Output file will be created if it does not exist
+
+    if (errIn != 0 || errOut != 0 || fin == NULL || fout == NULL) {
+        fprintf(stderr, "Open input/output file stream failed...\n");
+        // Close any files that were opened
+        if (fin != NULL) fclose(fin);
+        if (fout != NULL) fclose(fout);
         return 1;
     }
 

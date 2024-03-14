@@ -533,7 +533,7 @@ int main(int argc, char **argv) {
   noise_state = rnnoise_create(NULL);
   noisy = rnnoise_create(NULL);
   if (argc!= 5) {
-    fprintf(stderr, "usage: %s <speech> <noise> <count> <output_for_training>\n", argv[0]);
+    fprintf(stderr, "usage: %s clean_target.wav noise.wav loop_count feature.dat\n", argv[0]);
     return 1;
   }
   f1 = fopen(argv[1], "r");

@@ -263,3 +263,11 @@ __pycache__/
 *.pyc
 
 .vscode/
+
+# python virtual environments in project root
+.conda/
+conda/
+.venv/
+venv/
+tf/
+.tf/

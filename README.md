@@ -23,7 +23,7 @@ You can reference the `rnnoise_demo()` function in the vs project `Rnnoise-windo
 
 2. rnnoise frame process and output
 
-    ```c++
+    ```c
     for (size_t n = 0; n < totalFrameCnt / 480; n++) {
         get_frame_f32(pWavIn, frameIn, 480); // get f32 pcm data
     
@@ -32,15 +32,13 @@ You can reference the `rnnoise_demo()` function in the vs project `Rnnoise-windo
             write_frames_f32(pWavOut, 480, frameOut); // output to wav file
         }
     }
-```
+    ```
     
 3. destroy rnnoise object
 
-```c++
-   rnnoise_destroy(pRnnoise);
-```
-
-
+    ```c
+    rnnoise_destroy(pRnnoise);
+    ```
 
 ## Performance
 
@@ -174,6 +172,83 @@ Finally, copy the file `rnn_data.c` into `src` directory and recompile the proje
 PS:
 
 The training script  has a function called "resume from break point". While the `rnn_train.py` script is running, it will generate and scan a middle weight `mid_weights.hdf5`. If exits this file at the same directory when the scripts is started at the first time, it will continue the training process follow the last  epoch.  The script `midWeight2Final.py` will help you convert the *midweight* to the final *weight* which can be dumped to a new model.
+
+
+## How to compile the rnnoise_wrapper under windows using cmake
+Assuming you have installed the cmake and MSVC, you can follow the steps below to compile the rnnoise_wrapper vs2017/2019 is recommended.
+```powershell
+conda create --prefix .\.conda python=3.7 tensorflow keras Cython
+conda activate .\.conda
+#cmd.exe /k "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\Tools\VsDevCmd.bat"
+"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat"
+mkdir build && cd build
+cmake ..
+cmake --build . --config Debug # or --config Release
+cd ..
+```
+```powershell
+python setup.py build_ext --inplace  # to build the package and generate .\rnnoise_wrapper\rnnoise_wrapper.pyd
+# or
+python -m pip install . # to install the package
+```
+> Note: The `--inplace` option will generate the .pyd file in the directory specified in the `setup.py` file. The `--inplace` option is useful for development and testing purposes. The `--inplace` option is not required if you are installing the package using `python -m pip install .`.
+
+> Cool tip: you can reverse the generated `.pyd` file back to .c file using the `cython` command line tool. For example, `cython --embed -o rnnoise_wrapper.c rnnoise_wrapper.pyd` will generate the `rnnoise_wrapper.c` file from the `rnnoise_wrapper.pyd` file.
+
+## How to use the rnnoise_wrapper for inference
+```python
+# rnnoise_demo_python.py
+import numpy as np
+import scipy.io.wavfile as wav
+from pyrnnoise import create_rnnoise, process_frame, destroy_rnnoise
+
+def rnnoise_demo_python(in_file, out_file):
+    # Read the input WAV file
+    sample_rate, data = wav.read(in_file)
+    if data.ndim > 1:  # Ensure the audio is mono
+        print("Only mono audio files are supported.")
+        return
+
+    # Normalize data to floating point range [-1, 1] for processing
+    data_float = data.astype(np.float32) / 32768.0
+
+    # Create RNNoise instance
+    capsule = create_rnnoise()
+    
+    # Process audio frames
+    processed_data_float = np.zeros_like(data_float)
+    frame_size = 480  # RNNoise processes audio in frames of 480 samples
+    num_frames = len(data_float) // frame_size
+
+    for i in range(num_frames):
+        start = i * frame_size
+        end = start + frame_size
+        frame = data_float[start:end]
+        processed_frame = process_frame(capsule, frame)
+        processed_data_float[start:end] = processed_frame
+
+    # Convert processed data back to int16 for WAV file writing
+    processed_data = (processed_data_float * 32768).astype(np.int16)
+
+    # Write the output WAV file
+    wav.write(out_file, sample_rate, processed_data)
+
+    # Cleanup
+    destroy_rnnoise(capsule)
+    print("Processing complete.")
+
+if __name__ == "__main__":
+    import sys
+
+    if len(sys.argv) < 3:
+        print("Usage: python rnnoise_demo_python.py <inFile> <outFile>")
+        sys.exit(1)
+
+    in_file = sys.argv[1]
+    out_file = sys.argv[2]
+    rnnoise_demo_python(in_file, out_file)
+```
+
 
 ## Update log
 
